@@ -15,17 +15,17 @@ const PORT = process.env.PORT || 4001;
 
 // Security middleware
 app.use(helmet());
+
+// CORS - allow all origins for now
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? process.env.FRONTEND_URL
-    : ['http://localhost:4000', 'http://localhost:5173'],
+  origin: true,
   credentials: true,
 }));
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 500, // Increased limit
   message: { error: 'Muitas requisições, tente novamente mais tarde.' },
 });
 app.use('/api', limiter);
