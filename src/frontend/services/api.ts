@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { useAuthStore } from '../stores/auth.store';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -10,23 +9,11 @@ export const api = axios.create({
   },
 });
 
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Handle auth errors
+// No auth needed - just log errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      useAuthStore.getState().logout();
-      window.location.href = '/login';
-    }
+    console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
 );
