@@ -1,13 +1,17 @@
-FROM node:20-alpine AS builder
+# Use Debian-based image for better Prisma/OpenSSL compatibility
+FROM node:20-slim AS builder
 
 WORKDIR /app
+
+# Install OpenSSL and other dependencies required by Prisma
+RUN apt-get update -y && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY src/backend ./src/backend
@@ -20,10 +24,13 @@ RUN npx prisma generate
 # Build TypeScript
 RUN npm run build:backend
 
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
+
+# Install OpenSSL for Prisma runtime
+RUN apt-get update -y && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Copy built files
 COPY --from=builder /app/node_modules ./node_modules
@@ -32,7 +39,7 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package*.json ./
 
 # Expose port
-EXPOSE 3001
+EXPOSE 4001
 
 # Start command with migrations
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/backend/server.js"]

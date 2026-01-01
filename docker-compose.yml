@@ -32,9 +32,9 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-change-in-production}
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3001
+      PORT: 4001
     ports:
-      - "3001:3001"
+      - "4001:4001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,11 +46,11 @@ services:
       context: .
       dockerfile: docker/Dockerfile.frontend
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/api}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:4001/api}
     container_name: copyintel_frontend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "4000:4000"
     depends_on:
       - backend
     networks:

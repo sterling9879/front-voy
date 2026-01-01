@@ -30,7 +30,7 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       JWT_SECRET: ${JWT_SECRET}
       NODE_ENV: production
-      PORT: 3001
+      PORT: 4001
     depends_on:
       postgres:
         condition: service_healthy

@@ -157,11 +157,11 @@ http {
         }
 
         location / {
-            proxy_pass http://frontend:3000;
+            proxy_pass http://frontend:4000;
         }
 
         location /api {
-            proxy_pass http://backend:3001;
+            proxy_pass http://backend:4001;
         }
     }
 }
