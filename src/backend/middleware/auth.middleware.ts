@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import { prisma } from '../utils/prisma';
-import { AppError } from './error.middleware';
 
 export interface AuthRequest extends Request {
   userId?: string;
 }
+
+// Default user ID - will be created if not exists
+const DEFAULT_USER_ID = 'default-user-id';
 
 export async function authMiddleware(
   req: AuthRequest,
@@ -13,40 +14,25 @@ export async function authMiddleware(
   next: NextFunction
 ) {
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AppError(401, 'Token de autenticação não fornecido');
-    }
-
-    const token = authHeader.substring(7);
-    const secret = process.env.JWT_SECRET;
-
-    if (!secret) {
-      throw new AppError(500, 'JWT secret não configurado');
-    }
-
-    const decoded = jwt.verify(token, secret) as { userId: string };
-
-    // Verify user still exists
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: { id: true },
-    });
+    // Check if default user exists, create if not
+    let user = await prisma.user.findFirst();
 
     if (!user) {
-      throw new AppError(401, 'Usuário não encontrado');
+      user = await prisma.user.create({
+        data: {
+          id: DEFAULT_USER_ID,
+          email: 'usuario@voyra.com',
+          name: 'Usuário Voyra',
+          password: 'not-used',
+        },
+      });
     }
 
-    req.userId = decoded.userId;
+    req.userId = user.id;
     next();
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      next(new AppError(401, 'Token inválido'));
-    } else if (error instanceof jwt.TokenExpiredError) {
-      next(new AppError(401, 'Token expirado'));
-    } else {
-      next(error);
-    }
+    // If any error, just use a default ID
+    req.userId = DEFAULT_USER_ID;
+    next();
   }
 }

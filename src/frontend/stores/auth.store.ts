@@ -10,14 +10,23 @@ interface AuthState {
   logout: () => void;
 }
 
+// Default user - no login required
+const defaultUser: User = {
+  id: 'default-user',
+  email: 'usuario@voyra.com',
+  name: 'Usuário Voyra',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      user: null,
-      token: null,
-      isAuthenticated: false,
+      user: defaultUser,
+      token: 'no-auth-required',
+      isAuthenticated: true,
       setAuth: (user, token) => set({ user, token, isAuthenticated: true }),
-      logout: () => set({ user: null, token: null, isAuthenticated: false }),
+      logout: () => set({ user: defaultUser, token: 'no-auth-required', isAuthenticated: true }),
     }),
     {
       name: 'auth-storage',
