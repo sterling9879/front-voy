@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { DNA_ANALYSIS_PROMPT, INSIGHTS_PROMPT, AUDIENCE_SIGNATURE_PROMPT, CREATIVE_CORRELATION_PROMPT } from './prompts/dna-analysis';
 
-interface CopyDNAResult {
+export interface CopyDNAResult {
   tone: 'formal' | 'casual' | 'urgent' | 'empathetic' | 'provocative';
   hookLength: number;
   hookType: 'question' | 'statement' | 'number' | 'story' | 'challenge';
@@ -13,13 +13,13 @@ interface CopyDNAResult {
   emojiCount: number;
 }
 
-interface Insight {
+export interface Insight {
   pattern: string;
   evidence: string;
   action: string;
 }
 
-interface AudienceSignature {
+export interface AudienceSignature {
   segment: string;
   winningPattern: {
     tone: string;
@@ -31,7 +31,7 @@ interface AudienceSignature {
   confidence: 'high' | 'medium' | 'low';
 }
 
-interface CreativeCorrelation {
+export interface CreativeCorrelation {
   correlations: Array<{
     finding: string;
     creativeType: string;

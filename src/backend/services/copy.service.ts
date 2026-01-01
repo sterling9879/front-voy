@@ -40,8 +40,8 @@ export interface UpdateCopyData {
     gender?: 'male' | 'female' | 'all';
     interests?: string[];
   };
-  hypothesisId?: string;
-  hypothesisVariable?: string;
+  hypothesisId?: string | null;
+  hypothesisVariable?: string | null;
 }
 
 export interface UpdateCopyStatusData {
@@ -236,7 +236,7 @@ export async function updateCopy(
     (data as UpdateCopyData & { version: number }).version = existingCopy.version + 1;
 
     // Re-analyze DNA for new content
-    analyzeCopyDNA(data.content)
+    analyzeCopyDNA(data.content!)
       .then(async (dnaData) => {
         await prisma.copyDNA.upsert({
           where: { copyId },

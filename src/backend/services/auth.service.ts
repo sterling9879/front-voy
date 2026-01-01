@@ -104,7 +104,6 @@ function generateToken(userId: string): string {
     throw new AppError(500, 'JWT secret não configurado');
   }
 
-  return jwt.sign({ userId }, secret, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
+  const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+  return jwt.sign({ userId }, secret, { expiresIn } as jwt.SignOptions);
 }
