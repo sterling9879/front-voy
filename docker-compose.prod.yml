@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: copyintel_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - copyintel_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: copyintel_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: production
+      PORT: 3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - copyintel_network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        VITE_API_URL: https://${DOMAIN}/api
+    container_name: copyintel_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - copyintel_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: copyintel_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl.conf:/etc/nginx/ssl.conf:ro
+      - certbot_certs:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - copyintel_network
+
+  certbot:
+    image: certbot/certbot
+    container_name: copyintel_certbot
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  postgres_data:
+  certbot_certs:
+  certbot_www:
+
+networks:
+  copyintel_network:
+    driver: bridge

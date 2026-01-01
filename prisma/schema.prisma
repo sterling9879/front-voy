@@ -1,0 +1,254 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum CopyStatus {
+  testing
+  champion
+  scaling
+  failed
+  archived
+}
+
+enum Tone {
+  formal
+  casual
+  urgent
+  empathetic
+  provocative
+}
+
+enum HookType {
+  question
+  statement
+  number
+  story
+  challenge
+}
+
+enum ProofType {
+  social
+  authority
+  logic
+  testimonial
+  none
+}
+
+enum CtaStyle {
+  direct
+  soft
+  urgency
+  curiosity
+}
+
+enum CreativeType {
+  ugc
+  static
+  carousel
+  video
+  other
+}
+
+enum AudienceTemperature {
+  cold
+  warm
+  hot
+}
+
+enum HypothesisStatus {
+  active
+  concluded
+  cancelled
+}
+
+enum WinningVariable {
+  A
+  B
+  inconclusive
+}
+
+// Models
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  niche     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+
+  @@map("users")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  niche       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  copies     Copy[]
+  hypotheses Hypothesis[]
+
+  @@index([userId])
+  @@map("projects")
+}
+
+model Copy {
+  id              String     @id @default(cuid())
+  projectId       String
+  title           String
+  content         String     @db.Text
+  status          CopyStatus @default(testing)
+
+  // Metrics
+  ctr             Float?
+  roas            Float?
+  cpa             Float?
+  spend           Float      @default(0)
+  impressions     Int        @default(0)
+  clicks          Int        @default(0)
+  conversions     Int        @default(0)
+
+  campaignsCount  Int        @default(0)
+
+  // Creative info
+  creativeUrl     String?
+  creativeType    CreativeType?
+
+  // Audience segment (stored as JSON)
+  audienceSegment Json?
+
+  // Hypothesis relation
+  hypothesisId    String?
+  hypothesisVariable String? // "A" or "B"
+
+  // Version tracking
+  parentCopyId    String?
+  version         Int        @default(1)
+
+  // Timestamps
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  statusChangedAt DateTime   @default(now())
+
+  // Relations
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  hypothesis    Hypothesis?    @relation(fields: [hypothesisId], references: [id], onDelete: SetNull)
+  parentCopy    Copy?          @relation("CopyVersions", fields: [parentCopyId], references: [id], onDelete: SetNull)
+  childCopies   Copy[]         @relation("CopyVersions")
+  dna           CopyDNA?
+  versions      CopyVersion[]
+  failureReason FailureReason?
+  statusChanges StatusChange[]
+
+  @@index([projectId])
+  @@index([status])
+  @@index([hypothesisId])
+  @@map("copies")
+}
+
+model CopyDNA {
+  id             String    @id @default(cuid())
+  copyId         String    @unique
+  tone           Tone
+  hookLength     Int
+  hookType       HookType
+  proofType      ProofType
+  ctaStyle       CtaStyle
+  hasStorytelling Boolean
+  triggers       String[]
+  wordCount      Int
+  emojiCount     Int
+  analyzedAt     DateTime  @default(now())
+
+  copy Copy @relation(fields: [copyId], references: [id], onDelete: Cascade)
+
+  @@map("copy_dna")
+}
+
+model CopyVersion {
+  id                String   @id @default(cuid())
+  copyId            String
+  versionNumber     Int
+  content           String   @db.Text
+  metrics           Json?    // Snapshot of metrics at this version
+  changeDescription String?
+  createdAt         DateTime @default(now())
+
+  copy Copy @relation(fields: [copyId], references: [id], onDelete: Cascade)
+
+  @@index([copyId])
+  @@map("copy_versions")
+}
+
+model FailureReason {
+  id        String   @id @default(cuid())
+  copyId    String   @unique
+  reasons   String[]
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  copy Copy @relation(fields: [copyId], references: [id], onDelete: Cascade)
+
+  @@map("failure_reasons")
+}
+
+model Hypothesis {
+  id              String           @id @default(cuid())
+  projectId       String
+  name            String
+  description     String?          @db.Text
+  variableA       String
+  variableB       String
+  status          HypothesisStatus @default(active)
+  conclusion      String?          @db.Text
+  winningVariable WinningVariable?
+  createdAt       DateTime         @default(now())
+  concludedAt     DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  copies  Copy[]
+
+  @@index([projectId])
+  @@index([status])
+  @@map("hypotheses")
+}
+
+model StatusChange {
+  id         String     @id @default(cuid())
+  copyId     String
+  fromStatus CopyStatus
+  toStatus   CopyStatus
+  metrics    Json?      // Snapshot of metrics at this moment
+  createdAt  DateTime   @default(now())
+
+  copy Copy @relation(fields: [copyId], references: [id], onDelete: Cascade)
+
+  @@index([copyId])
+  @@index([createdAt])
+  @@map("status_changes")
+}
+
+model NicheBenchmark {
+  id                String   @id @default(cuid())
+  niche             String   @unique
+  avgChampionRate   Float
+  avgRoas           Float
+  topPercentileRoas Float
+  sampleSize        Int
+  updatedAt         DateTime @updatedAt
+
+  @@map("niche_benchmarks")
+}
